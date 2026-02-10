@@ -1,6 +1,6 @@
 @echo off
 
-set PYTHON_VER=3.10.9
+set PYTHON_VER=3.12.10
 
 :: Deactivate the virtual environment
 call .\venv\Scripts\deactivate.bat
@@ -22,9 +22,9 @@ if %errorlevel% equ 0 (
     REM Check if the batch was started via double-click
     IF /i "%comspec% /c %~0 " equ "%cmdcmdline:"=%" (
         REM echo This script was started by double clicking.
-        cmd /k python.exe kohya_gui.py %*
+        cmd /k python.exe kohya_gui.py --noverify %*
     ) ELSE (
         REM echo This script was started from a command prompt.
-        python.exe kohya_gui.py %*
+        python.exe kohya_gui.py --noverify %*
     )
 )

@@ -39,6 +39,7 @@ from .class_huggingface import HuggingFace
 from .class_metadata import MetaData
 from .class_gui_config import KohyaSSGUIConfig
 from .class_flux1 import flux1Training
+from .class_lumina import luminaTraining
 
 from .custom_logging import setup_logging
 
@@ -71,6 +72,7 @@ def save_configuration(
     v_parameterization,
     sdxl_checkbox,
     flux1_checkbox,
+    lumina_checkbox,
     train_dir,
     image_folder,
     output_dir,
@@ -243,6 +245,25 @@ def save_configuration(
     double_blocks_to_swap,
     mem_eff_save,
     apply_t5_attn_mask,
+    lumina_gemma2,
+    lumina_ae,
+    lumina_use_flash_attn,
+    lumina_use_sage_attn,
+    lumina_sample_batch_size,
+    lumina_system_prompt,
+    lumina_gemma2_max_token_length,
+    lumina_timestep_sampling,
+    lumina_sigmoid_scale,
+    lumina_model_prediction_type,
+    lumina_discrete_flow_shift,
+    lumina_train_blocks,
+    lumina_split_qkv,
+    lumina_verbose,
+    lumina_attn_dim,
+    lumina_mlp_dim,
+    lumina_mod_dim,
+    lumina_refiner_dim,
+    lumina_embedder_dims,
 ):
     # Get list of function parameters and values
     parameters = list(locals().items())
@@ -287,6 +308,7 @@ def open_configuration(
     v_parameterization,
     sdxl_checkbox,
     flux1_checkbox,
+    lumina_checkbox,
     train_dir,
     image_folder,
     output_dir,
@@ -509,6 +531,7 @@ def train_model(
     v_parameterization,
     sdxl_checkbox,
     flux1_checkbox,
+    lumina_checkbox,
     train_dir,
     image_folder,
     output_dir,
@@ -681,6 +704,25 @@ def train_model(
     double_blocks_to_swap,
     mem_eff_save,
     apply_t5_attn_mask,
+    lumina_gemma2,
+    lumina_ae,
+    lumina_use_flash_attn,
+    lumina_use_sage_attn,
+    lumina_sample_batch_size,
+    lumina_system_prompt,
+    lumina_gemma2_max_token_length,
+    lumina_timestep_sampling,
+    lumina_sigmoid_scale,
+    lumina_model_prediction_type,
+    lumina_discrete_flow_shift,
+    lumina_train_blocks,
+    lumina_split_qkv,
+    lumina_verbose,
+    lumina_attn_dim,
+    lumina_mlp_dim,
+    lumina_mod_dim,
+    lumina_refiner_dim,
+    lumina_embedder_dims,
 ):
     # Get list of function parameters and values
     parameters = list(locals().items())
@@ -736,6 +778,15 @@ def train_model(
 
     if not validate_model_path(pretrained_model_name_or_path):
         return TRAIN_BUTTON_VISIBLE
+
+    if lumina_checkbox:
+        if not validate_model_path(lumina_gemma2):
+            return TRAIN_BUTTON_VISIBLE
+        if not validate_model_path(lumina_ae):
+            return TRAIN_BUTTON_VISIBLE
+    elif flux1_checkbox:
+        if not validate_model_path(ae):
+            return TRAIN_BUTTON_VISIBLE
 
     if not validate_folder_path(resume):
         return TRAIN_BUTTON_VISIBLE
@@ -913,6 +964,8 @@ def train_model(
         run_cmd.append(rf"{scriptdir}/sd-scripts/sdxl_train.py")
     elif sd3_checkbox:
         run_cmd.append(rf"{scriptdir}/sd-scripts/sd3_train.py")
+    elif lumina_checkbox:
+        run_cmd.append(rf"{scriptdir}/sd-scripts/lumina_train.py")
     elif flux1_checkbox:
         run_cmd.append(rf"{scriptdir}/sd-scripts/flux_train.py")
     else:
@@ -1076,6 +1129,7 @@ def train_model(
         "shuffle_caption": shuffle_caption,
         "skip_cache_check": skip_cache_check,
         "t5xxl": t5xxl if sd3_checkbox else flux1_t5xxl if flux1_checkbox else None,
+        "gemma2": lumina_gemma2 if lumina_checkbox else None,
         "train_batch_size": train_batch_size,
         "train_data_dir": image_folder,
         "train_text_encoder": train_text_encoder,
@@ -1108,27 +1162,72 @@ def train_model(
         # Flux.1 specific parameters
         # "cache_text_encoder_outputs": see previous assignment above for code
         # "cache_text_encoder_outputs_to_disk": see previous assignment above for code
-        "ae": ae if flux1_checkbox else None,
+        "ae": ae if flux1_checkbox else lumina_ae if lumina_checkbox else None,
         # "clip_l": see previous assignment above for code
         # "t5xxl": see previous assignment above for code
-        "discrete_flow_shift": discrete_flow_shift if flux1_checkbox else None,
-        "model_prediction_type": model_prediction_type if flux1_checkbox else None,
-        "timestep_sampling": timestep_sampling if flux1_checkbox else None,
+        "discrete_flow_shift": (
+            discrete_flow_shift
+            if flux1_checkbox
+            else lumina_discrete_flow_shift
+            if lumina_checkbox
+            else None
+        ),
+        "model_prediction_type": (
+            model_prediction_type
+            if flux1_checkbox
+            else lumina_model_prediction_type
+            if lumina_checkbox
+            else None
+        ),
+        "timestep_sampling": (
+            timestep_sampling
+            if flux1_checkbox
+            else lumina_timestep_sampling
+            if lumina_checkbox
+            else None
+        ),
         "split_mode": split_mode if flux1_checkbox else None,
         "train_blocks": train_blocks if flux1_checkbox else None,
         "t5xxl_max_token_length": t5xxl_max_token_length if flux1_checkbox else None,
         "guidance_scale": guidance_scale if flux1_checkbox else None,
         "blockwise_fused_optimizers": (
-            blockwise_fused_optimizers if flux1_checkbox else None
+            blockwise_fused_optimizers if flux1_checkbox or lumina_checkbox else None
         ),
         "cpu_offload_checkpointing": (
-            cpu_offload_checkpointing if flux1_checkbox else None
+            cpu_offload_checkpointing
+            if flux1_checkbox or lumina_checkbox
+            else None
         ),
-        "blocks_to_swap": blocks_to_swap if flux1_checkbox else None,
-        "single_blocks_to_swap": single_blocks_to_swap if flux1_checkbox else None,
-        "double_blocks_to_swap": double_blocks_to_swap if flux1_checkbox else None,
-        "mem_eff_save": mem_eff_save if flux1_checkbox else None,
+        "blocks_to_swap": (
+            blocks_to_swap if flux1_checkbox or lumina_checkbox else None
+        ),
+        "single_blocks_to_swap": (
+            single_blocks_to_swap if flux1_checkbox or lumina_checkbox else None
+        ),
+        "double_blocks_to_swap": (
+            double_blocks_to_swap if flux1_checkbox or lumina_checkbox else None
+        ),
+        "mem_eff_save": mem_eff_save if flux1_checkbox or lumina_checkbox else None,
         "apply_t5_attn_mask": apply_t5_attn_mask if flux1_checkbox else None,
+        "system_prompt": (
+            lumina_system_prompt if lumina_checkbox and lumina_system_prompt else None
+        ),
+        "sample_batch_size": (
+            int(lumina_sample_batch_size)
+            if lumina_checkbox
+            and lumina_sample_batch_size not in [None, "", 0]
+            else None
+        ),
+        "gemma2_max_token_length": (
+            int(lumina_gemma2_max_token_length) if lumina_checkbox else None
+        ),
+        "sigmoid_scale": (
+            float(lumina_sigmoid_scale)
+            if lumina_checkbox and lumina_sigmoid_scale not in [None, ""]
+            else None
+        ),
+        "use_flash_attn": True if lumina_checkbox and lumina_use_flash_attn else None,
+        "use_sage_attn": True if lumina_checkbox and lumina_use_sage_attn else None,
     }
 
     # Given dictionary `config_toml_data`
@@ -1331,6 +1430,14 @@ def finetune_tab(
                 finetuning=True,
             )
 
+            # Add Lumina Parameters
+            lumina_training = luminaTraining(
+                headless=headless,
+                config=config,
+                lumina_checkbox=source_model.lumina_checkbox,
+                finetuning=True,
+            )
+
             # Add SD3 Parameters
             sd3_training = sd3Training(
                 headless=headless, config=config, sd3_checkbox=source_model.sd3_checkbox
@@ -1384,6 +1491,7 @@ def finetune_tab(
             source_model.v_parameterization,
             source_model.sdxl_checkbox,
             source_model.flux1_checkbox,
+            source_model.lumina_checkbox,
             train_dir,
             image_folder,
             output_dir,
@@ -1555,6 +1663,25 @@ def finetune_tab(
             flux1_training.double_blocks_to_swap,
             flux1_training.mem_eff_save,
             flux1_training.apply_t5_attn_mask,
+            lumina_training.gemma2,
+            lumina_training.ae,
+            lumina_training.use_flash_attn,
+            lumina_training.use_sage_attn,
+            lumina_training.sample_batch_size,
+            lumina_training.system_prompt,
+            lumina_training.gemma2_max_token_length,
+            lumina_training.timestep_sampling,
+            lumina_training.sigmoid_scale,
+            lumina_training.model_prediction_type,
+            lumina_training.discrete_flow_shift,
+            lumina_training.train_blocks,
+            lumina_training.split_qkv,
+            lumina_training.verbose,
+            lumina_training.attn_dim,
+            lumina_training.mlp_dim,
+            lumina_training.mod_dim,
+            lumina_training.refiner_dim,
+            lumina_training.embedder_dims,
         ]
 
         configuration.button_open_config.click(

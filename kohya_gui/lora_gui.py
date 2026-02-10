@@ -42,6 +42,7 @@ from .class_huggingface import HuggingFace
 from .class_metadata import MetaData
 from .class_gui_config import KohyaSSGUIConfig
 from .class_flux1 import flux1Training
+from .class_lumina import luminaTraining
 
 from .dreambooth_folder_creation_gui import (
     gradio_dreambooth_folder_creation_tab,
@@ -85,6 +86,7 @@ def save_configuration(
     v_parameterization,
     sdxl,
     flux1_checkbox,
+    lumina_checkbox,
     dataset_config,
     save_model_as,
     save_precision,
@@ -263,6 +265,26 @@ def save_configuration(
     metadata_license,
     metadata_tags,
     metadata_title,
+    # Lumina
+    lumina_gemma2,
+    lumina_ae,
+    lumina_use_flash_attn,
+    lumina_use_sage_attn,
+    lumina_sample_batch_size,
+    lumina_system_prompt,
+    lumina_gemma2_max_token_length,
+    lumina_timestep_sampling,
+    lumina_sigmoid_scale,
+    lumina_model_prediction_type,
+    lumina_discrete_flow_shift,
+    lumina_train_blocks,
+    lumina_split_qkv,
+    lumina_verbose,
+    lumina_attn_dim,
+    lumina_mlp_dim,
+    lumina_mod_dim,
+    lumina_refiner_dim,
+    lumina_embedder_dims,
     # Flux1
     flux1_cache_text_encoder_outputs,
     flux1_cache_text_encoder_outputs_to_disk,
@@ -371,6 +393,7 @@ def open_configuration(
     v_parameterization,
     sdxl,
     flux1_checkbox,
+    lumina_checkbox,
     dataset_config,
     save_model_as,
     save_precision,
@@ -549,6 +572,26 @@ def open_configuration(
     metadata_license,
     metadata_tags,
     metadata_title,
+    # Lumina
+    lumina_gemma2,
+    lumina_ae,
+    lumina_use_flash_attn,
+    lumina_use_sage_attn,
+    lumina_sample_batch_size,
+    lumina_system_prompt,
+    lumina_gemma2_max_token_length,
+    lumina_timestep_sampling,
+    lumina_sigmoid_scale,
+    lumina_model_prediction_type,
+    lumina_discrete_flow_shift,
+    lumina_train_blocks,
+    lumina_split_qkv,
+    lumina_verbose,
+    lumina_attn_dim,
+    lumina_mlp_dim,
+    lumina_mod_dim,
+    lumina_refiner_dim,
+    lumina_embedder_dims,
     # Flux1
     flux1_cache_text_encoder_outputs,
     flux1_cache_text_encoder_outputs_to_disk,
@@ -748,6 +791,7 @@ def train_model(
     v_parameterization,
     sdxl,
     flux1_checkbox,
+    lumina_checkbox,
     dataset_config,
     save_model_as,
     save_precision,
@@ -926,6 +970,26 @@ def train_model(
     metadata_license,
     metadata_tags,
     metadata_title,
+    # Lumina
+    lumina_gemma2,
+    lumina_ae,
+    lumina_use_flash_attn,
+    lumina_use_sage_attn,
+    lumina_sample_batch_size,
+    lumina_system_prompt,
+    lumina_gemma2_max_token_length,
+    lumina_timestep_sampling,
+    lumina_sigmoid_scale,
+    lumina_model_prediction_type,
+    lumina_discrete_flow_shift,
+    lumina_train_blocks,
+    lumina_split_qkv,
+    lumina_verbose,
+    lumina_attn_dim,
+    lumina_mlp_dim,
+    lumina_mod_dim,
+    lumina_refiner_dim,
+    lumina_embedder_dims,
     # Flux1
     flux1_cache_text_encoder_outputs,
     flux1_cache_text_encoder_outputs_to_disk,
@@ -1019,6 +1083,12 @@ def train_model(
             )
             return TRAIN_BUTTON_VISIBLE
 
+    if lumina_checkbox:
+        log.info("Validating LoRA type is Lumina when Lumina checkbox is checked...")
+        if LoRA_type != "Lumina":
+            log.error("LoRA type must be set to 'Lumina' if Lumina checkbox is checked.")
+            return TRAIN_BUTTON_VISIBLE
+
     #
     # Validate paths
     #
@@ -1060,6 +1130,12 @@ def train_model(
 
     if not validate_model_path(vae):
         return TRAIN_BUTTON_VISIBLE
+
+    if lumina_checkbox:
+        if not validate_model_path(lumina_gemma2):
+            return TRAIN_BUTTON_VISIBLE
+        if not validate_model_path(lumina_ae):
+            return TRAIN_BUTTON_VISIBLE
 
     #
     # End of path validation
@@ -1261,6 +1337,8 @@ def train_model(
 
     if sdxl:
         run_cmd.append(rf"{scriptdir}/sd-scripts/sdxl_train_network.py")
+    elif lumina_checkbox:
+        run_cmd.append(rf"{scriptdir}/sd-scripts/lumina_train_network.py")
     elif flux1_checkbox:
         run_cmd.append(rf"{scriptdir}/sd-scripts/flux_train_network.py")
     elif sd3_checkbox:
@@ -1305,6 +1383,25 @@ def train_model(
     if LoRA_type == "LyCORIS/Native Fine-Tuning":
         network_module = "lycoris.kohya"
         network_args = f" preset={LyCORIS_preset} rank_dropout={rank_dropout} module_dropout={module_dropout} rank_dropout_scale={rank_dropout_scale} algo=full train_norm={train_norm}"
+
+    if LoRA_type == "Lumina":
+        network_module = "networks.lora_lumina"
+        lumina_arg_map = {
+            "attn_dim": lumina_attn_dim,
+            "mlp_dim": lumina_mlp_dim,
+            "mod_dim": lumina_mod_dim,
+            "refiner_dim": lumina_refiner_dim,
+            "embedder_dims": lumina_embedder_dims,
+        }
+        for key, value in lumina_arg_map.items():
+            if value:
+                network_args += f" {key}={value}"
+        if lumina_train_blocks and lumina_train_blocks not in [None, "", "all"]:
+            network_args += f" train_blocks={lumina_train_blocks}"
+        if lumina_split_qkv:
+            network_args += " split_qkv=True"
+        if lumina_verbose:
+            network_args += " verbose=True"
 
     if LoRA_type in ["Flux1"]:
         # Add a list of supported network arguments for Flux1 below when supported
@@ -1554,6 +1651,7 @@ def train_model(
         "caption_dropout_rate": caption_dropout_rate,
         "caption_extension": caption_extension,
         "clip_l": clip_l_value,
+    "gemma2": lumina_gemma2 if lumina_checkbox else None,
         "clip_skip": clip_skip if clip_skip != 0 else None,
         "color_aug": color_aug,
         "dataset_config": dataset_config,
@@ -1610,6 +1708,12 @@ def train_model(
         "max_grad_norm": max_grad_norm,
         "max_timestep": max_timestep if max_timestep != 0 else None,
         "max_token_length": int(max_token_length) if not flux1_checkbox else None,
+        "gemma2_max_token_length": (
+            int(lumina_gemma2_max_token_length)
+            if lumina_checkbox
+            and lumina_gemma2_max_token_length not in [None, "", 0]
+            else None
+        ),
         "max_train_epochs": (
             int(max_train_epochs) if int(max_train_epochs) != 0 else None
         ),
@@ -1674,6 +1778,11 @@ def train_model(
         ),
         "sample_prompts": create_prompt_file(sample_prompts, output_dir),
         "sample_sampler": sample_sampler,
+        "sample_batch_size": (
+            int(lumina_sample_batch_size)
+            if lumina_checkbox and lumina_sample_batch_size not in [None, "", 0]
+            else None
+        ),
         "save_every_n_epochs": (
             save_every_n_epochs if save_every_n_epochs != 0 else None
         ),
@@ -1704,6 +1813,7 @@ def train_model(
         "train_batch_size": train_batch_size,
         "train_data_dir": train_data_dir,
         "training_comment": training_comment,
+    "system_prompt": lumina_system_prompt if lumina_checkbox and lumina_system_prompt else None,
         "unet_lr": unet_lr_float if unet_lr_float != 0.0 else None,
         "log_with": log_with,
         "v2": v2,
@@ -1715,6 +1825,8 @@ def train_model(
         "wandb_run_name": wandb_run_name if wandb_run_name != "" else output_name,
         "weighted_captions": weighted_captions,
         "xformers": True if xformers == "xformers" else None,
+    "use_flash_attn": True if lumina_checkbox and lumina_use_flash_attn else None,
+    "use_sage_attn": True if lumina_checkbox and lumina_use_sage_attn else None,
         # SD3 only Parameters
         # "cache_text_encoder_outputs": see previous assignment above for code
         # "cache_text_encoder_outputs_to_disk": see previous assignment above for code
@@ -1742,12 +1854,35 @@ def train_model(
         # Flux.1 specific parameters
         # "cache_text_encoder_outputs": see previous assignment above for code
         # "cache_text_encoder_outputs_to_disk": see previous assignment above for code
-        "ae": ae if flux1_checkbox else None,
+    "ae": ae if flux1_checkbox else lumina_ae if lumina_checkbox else None,
         # "clip_l": see previous assignment above for code
         "t5xxl": t5xxl_value,
-        "discrete_flow_shift": float(discrete_flow_shift) if flux1_checkbox else None,
-        "model_prediction_type": model_prediction_type if flux1_checkbox else None,
-        "timestep_sampling": timestep_sampling if flux1_checkbox else None,
+        "discrete_flow_shift": (
+            float(discrete_flow_shift)
+            if flux1_checkbox
+            else float(lumina_discrete_flow_shift)
+            if lumina_checkbox
+            else None
+        ),
+        "model_prediction_type": (
+            model_prediction_type
+            if flux1_checkbox
+            else lumina_model_prediction_type
+            if lumina_checkbox
+            else None
+        ),
+        "timestep_sampling": (
+            timestep_sampling
+            if flux1_checkbox
+            else lumina_timestep_sampling
+            if lumina_checkbox
+            else None
+        ),
+        "sigmoid_scale": (
+            float(lumina_sigmoid_scale)
+            if lumina_checkbox and lumina_sigmoid_scale not in [None, ""]
+            else None
+        ),
         "split_mode": split_mode if flux1_checkbox else None,
         "t5xxl_max_token_length": (
             int(t5xxl_max_token_length) if flux1_checkbox else None
@@ -1925,6 +2060,7 @@ def lora_tab(
                         choices=[
                             "Flux1",
                             "Flux1 OFT",
+                            "Lumina",
                             "Kohya DyLoRA",
                             "Kohya LoCon",
                             "LoRA-FA",
@@ -2240,6 +2376,7 @@ def lora_tab(
                                 in {
                                     "Flux1",
                                     "Flux1 OFT",
+                                    "Lumina",
                                     "Kohya DyLoRA",
                                     "Kohya LoCon",
                                     "LoRA-FA",
@@ -2280,6 +2417,7 @@ def lora_tab(
                                 in {
                                     "Flux1",
                                     "Flux1 OFT",
+                                    "Lumina",
                                     "Standard",
                                     "Kohya DyLoRA",
                                     "Kohya LoCon",
@@ -2294,6 +2432,7 @@ def lora_tab(
                                 in {
                                     "Flux1",
                                     "Flux1 OFT",
+                                    "Lumina",
                                     "Standard",
                                     "LoCon",
                                     "Kohya DyLoRA",
@@ -2316,6 +2455,7 @@ def lora_tab(
                                 in {
                                     "Flux1",
                                     "Flux1 OFT",
+                                    "Lumina",
                                     "Standard",
                                     "LoCon",
                                     "Kohya DyLoRA",
@@ -2338,6 +2478,7 @@ def lora_tab(
                                 in {
                                     "Flux1",
                                     "Flux1 OFT",
+                                    "Lumina",
                                     "Standard",
                                     "LoCon",
                                     "Kohya DyLoRA",
@@ -2528,6 +2669,7 @@ def lora_tab(
                                     "LyCORIS/LoHa",
                                     "LyCORIS/LoCon",
                                     "LyCORIS/LoKr",
+                                    "Lumina",
                                     "Standard",
                                 },
                             },
@@ -2549,6 +2691,7 @@ def lora_tab(
                                     "LyCORIS/LoHa",
                                     "LyCORIS/LoKr",
                                     "LyCORIS/Native Fine-Tuning",
+                                    "Lumina",
                                     "Standard",
                                 },
                             },
@@ -2569,6 +2712,7 @@ def lora_tab(
                                     "Kohya LoCon",
                                     "LoRA-FA",
                                     "LyCORIS/Native Fine-Tuning",
+                                    "Lumina",
                                     "Standard",
                                 },
                             },
@@ -2589,6 +2733,7 @@ def lora_tab(
                                     "Kohya LoCon",
                                     "LyCORIS/Native Fine-Tuning",
                                     "LoRA-FA",
+                                    "Lumina",
                                     "Standard",
                                 },
                             },
@@ -2653,6 +2798,7 @@ def lora_tab(
                                     "Kohya LoCon",
                                     "LoRA-FA",
                                     "LyCORIS/Native Fine-Tuning",
+                                    "Lumina",
                                     "Standard",
                                 },
                             },
@@ -2666,6 +2812,13 @@ def lora_tab(
                         results.append(settings["gr_type"](**update_params))
 
                     return tuple(results)
+
+                # Add Lumina parameters to the basic training accordion
+                lumina_training = luminaTraining(
+                    headless=headless,
+                    config=config,
+                    lumina_checkbox=source_model.lumina_checkbox,
+                )
 
                 # Add FLUX1 Parameters to the basic training accordion
                 flux1_training = flux1Training(
@@ -2803,6 +2956,7 @@ def lora_tab(
             source_model.v_parameterization,
             source_model.sdxl_checkbox,
             source_model.flux1_checkbox,
+            source_model.lumina_checkbox,
             source_model.dataset_config,
             source_model.save_model_as,
             source_model.save_precision,
@@ -2973,6 +3127,26 @@ def lora_tab(
             metadata.metadata_license,
             metadata.metadata_tags,
             metadata.metadata_title,
+            # Lumina parameters
+            lumina_training.gemma2,
+            lumina_training.ae,
+            lumina_training.use_flash_attn,
+            lumina_training.use_sage_attn,
+            lumina_training.sample_batch_size,
+            lumina_training.system_prompt,
+            lumina_training.gemma2_max_token_length,
+            lumina_training.timestep_sampling,
+            lumina_training.sigmoid_scale,
+            lumina_training.model_prediction_type,
+            lumina_training.discrete_flow_shift,
+            lumina_training.train_blocks,
+            lumina_training.split_qkv,
+            lumina_training.verbose,
+            lumina_training.attn_dim,
+            lumina_training.mlp_dim,
+            lumina_training.mod_dim,
+            lumina_training.refiner_dim,
+            lumina_training.embedder_dims,
             # Flux1 parameters
             flux1_training.flux1_cache_text_encoder_outputs,
             flux1_training.flux1_cache_text_encoder_outputs_to_disk,

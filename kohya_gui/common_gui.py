@@ -955,8 +955,8 @@ def set_pretrained_model_name_or_path_input(
         refresh_method (callable, optional): A function to refresh the model list.
 
     Returns:
-        tuple: A tuple containing the Dropdown widget, v2 checkbox, v_parameterization checkbox,
-               and sdxl checkbox.
+     tuple: A tuple containing the Dropdown widget followed by v2, v_parameterization,
+         sdxl, sd3, flux1, and lumina checkboxes.
     """
     # Check if the given pretrained_model_name_or_path is in the list of SDXL models
     if pretrained_model_name_or_path in SDXL_MODELS:
@@ -966,6 +966,7 @@ def set_pretrained_model_name_or_path_input(
         sdxl = gr.Checkbox(value=True, visible=False)
         sd3 = gr.Checkbox(value=False, visible=False)
         flux1 = gr.Checkbox(value=False, visible=False)
+        lumina = gr.Checkbox(value=False, visible=False)
         return (
             gr.Dropdown(),
             v2,
@@ -973,6 +974,7 @@ def set_pretrained_model_name_or_path_input(
             sdxl,
             sd3,
             flux1,
+            lumina,
         )
 
     # Check if the given pretrained_model_name_or_path is in the list of V2 base models
@@ -983,6 +985,7 @@ def set_pretrained_model_name_or_path_input(
         sdxl = gr.Checkbox(value=False, visible=False)
         sd3 = gr.Checkbox(value=False, visible=False)
         flux1 = gr.Checkbox(value=False, visible=False)
+        lumina = gr.Checkbox(value=False, visible=False)
         return (
             gr.Dropdown(),
             v2,
@@ -990,6 +993,7 @@ def set_pretrained_model_name_or_path_input(
             sdxl,
             sd3,
             flux1,
+            lumina,
         )
 
     # Check if the given pretrained_model_name_or_path is in the list of V parameterization models
@@ -1002,6 +1006,7 @@ def set_pretrained_model_name_or_path_input(
         sdxl = gr.Checkbox(value=False, visible=False)
         sd3 = gr.Checkbox(value=False, visible=False)
         flux1 = gr.Checkbox(value=False, visible=False)
+        lumina = gr.Checkbox(value=False, visible=False)
         return (
             gr.Dropdown(),
             v2,
@@ -1009,6 +1014,7 @@ def set_pretrained_model_name_or_path_input(
             sdxl,
             sd3,
             flux1,
+            lumina,
         )
 
     # Check if the given pretrained_model_name_or_path is in the list of V1 models
@@ -1019,6 +1025,7 @@ def set_pretrained_model_name_or_path_input(
         sdxl = gr.Checkbox(value=False, visible=False)
         sd3 = gr.Checkbox(value=False, visible=False)
         flux1 = gr.Checkbox(value=False, visible=False)
+        lumina = gr.Checkbox(value=False, visible=False)
         return (
             gr.Dropdown(),
             v2,
@@ -1026,6 +1033,7 @@ def set_pretrained_model_name_or_path_input(
             sdxl,
             sd3,
             flux1,
+            lumina,
         )
 
     # Check if the model_list is set to 'custom'
@@ -1034,6 +1042,7 @@ def set_pretrained_model_name_or_path_input(
     sdxl = gr.Checkbox(visible=True)
     sd3 = gr.Checkbox(visible=True)
     flux1 = gr.Checkbox(visible=True)
+    lumina = gr.Checkbox(visible=True)
 
     # Auto-detect model type if safetensors file path is given
     if pretrained_model_name_or_path.lower().endswith(".safetensors"):
@@ -1058,6 +1067,7 @@ def set_pretrained_model_name_or_path_input(
         sdxl,
         sd3,
         flux1,
+        lumina,
     )
 
 
@@ -1538,8 +1548,14 @@ def validate_args_setting(input_string):
 
 def setup_environment():
     env = os.environ.copy()
-    env["PYTHONPATH"] = (
-        rf"{scriptdir}{os.pathsep}{scriptdir}/sd-scripts{os.pathsep}{env.get('PYTHONPATH', '')}"
+    pythonpath_parts = [
+        rf"{scriptdir}/patches",
+        rf"{scriptdir}",
+        rf"{scriptdir}/sd-scripts",
+        env.get("PYTHONPATH", ""),
+    ]
+    env["PYTHONPATH"] = os.pathsep.join(
+        part for part in pythonpath_parts if part not in (None, "")
     )
     env["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
