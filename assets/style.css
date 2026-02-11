@@ -341,3 +341,29 @@
     border: 1px solid #4f4d4b;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
+
+.anima_background {
+    background: #e6ecf0; /* Light blue-gray tone */
+    padding: 1em;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+}
+
+.anima_background:hover {
+    background-color: #dce2e7; /* Slightly darker on hover */
+    border: 1px solid #bcc5cd;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow on hover */
+}
+
+.dark .anima_background {
+    background: #1e2329;
+    padding: 1em;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dark .anima_background:hover {
+    background-color: #282d34;
+    border: 1px solid #464d55;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}

@@ -2,5 +2,18 @@
     "python.linting.enabled": true,
     "python.formatting.provider": "yapf",
     "DockerRun.DisableDockerrc": true,
-    "augment.enableAutomaticCompletions": true
+    "augment.enableAutomaticCompletions": true,
+    "chat.tools.terminal.autoApprove": {
+        "Set-Content": true,
+        "old": true,
+        "print(f'Found": true,
+        "count": true,
+        "already": true,
+        "print(f'Already": true,
+        "f'Already": true,
+        "content": true,
+        "with": true,
+        "f.write(content)": true,
+        "print('Done')": true
+    }
 }
