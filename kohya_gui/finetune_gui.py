@@ -1285,11 +1285,11 @@ def train_model(
         # "cache_text_encoder_outputs": see previous assignment above for code
         # "cache_text_encoder_outputs_to_disk": see previous assignment above for code
         "ae": ae if flux1_checkbox else lumina_ae if lumina_checkbox else None,
-        "dit": anima_dit_path if anima_checkbox else None,
-        "vae": anima_vae_path if anima_checkbox else None,
-        "qwen3": anima_qwen3_path if anima_checkbox else None,
-        "llm_adapter": anima_llm_adapter_path if anima_checkbox and anima_llm_adapter_path else None,
-        "t5_tokenizer": anima_t5_tokenizer_path if anima_checkbox and anima_t5_tokenizer_path else None,
+        "dit_path": anima_dit_path if anima_checkbox else None,
+        "vae_path": anima_vae_path if anima_checkbox else None,
+        "qwen3_path": anima_qwen3_path if anima_checkbox else None,
+        "llm_adapter_path": anima_llm_adapter_path if anima_checkbox and anima_llm_adapter_path else None,
+        "t5_tokenizer_path": anima_t5_tokenizer_path if anima_checkbox and anima_t5_tokenizer_path else None,
         "qwen3_max_token_length": int(anima_qwen3_max_token_length) if anima_checkbox and anima_qwen3_max_token_length else None,
         "t5_max_token_length": int(anima_t5_max_token_length) if anima_checkbox and anima_t5_max_token_length else None,
         "transformer_dtype": anima_transformer_dtype if anima_checkbox and anima_transformer_dtype else None,
