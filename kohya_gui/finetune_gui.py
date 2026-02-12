@@ -40,6 +40,7 @@ from .class_metadata import MetaData
 from .class_gui_config import KohyaSSGUIConfig
 from .class_flux1 import flux1Training
 from .class_lumina import luminaTraining
+from .class_anima import animaTraining
 
 from .custom_logging import setup_logging
 
@@ -73,6 +74,7 @@ def save_configuration(
     sdxl_checkbox,
     flux1_checkbox,
     lumina_checkbox,
+    anima_checkbox,
     train_dir,
     image_folder,
     output_dir,
@@ -264,6 +266,36 @@ def save_configuration(
     lumina_mod_dim,
     lumina_refiner_dim,
     lumina_embedder_dims,
+    # Anima parameters
+    anima_dit_path,
+    anima_vae_path,
+    anima_qwen3_path,
+    anima_llm_adapter_path,
+    anima_t5_tokenizer_path,
+    anima_qwen3_max_token_length,
+    anima_t5_max_token_length,
+    anima_discrete_flow_shift,
+    anima_timestep_sample_method,
+    anima_sigmoid_scale,
+    anima_transformer_dtype,
+    anima_flash_attn,
+    anima_cpu_offload_checkpointing,
+    anima_unsloth_offload_checkpointing,
+    anima_blockwise_fused_optimizers,
+    anima_llm_adapter_lr,
+    anima_self_attn_lr,
+    anima_cross_attn_lr,
+    anima_mlp_lr,
+    anima_mod_lr,
+    anima_self_attn_dim,
+    anima_cross_attn_dim,
+    anima_mlp_dim,
+    anima_mod_dim,
+    anima_llm_adapter_dim,
+    anima_emb_dims,
+    anima_train_block_indices,
+    anima_train_llm_adapter,
+    anima_verbose,
 ):
     # Get list of function parameters and values
     parameters = list(locals().items())
@@ -309,6 +341,7 @@ def open_configuration(
     sdxl_checkbox,
     flux1_checkbox,
     lumina_checkbox,
+    anima_checkbox,
     train_dir,
     image_folder,
     output_dir,
@@ -481,6 +514,55 @@ def open_configuration(
     double_blocks_to_swap,
     mem_eff_save,
     apply_t5_attn_mask,
+    lumina_gemma2,
+    lumina_ae,
+    lumina_use_flash_attn,
+    lumina_use_sage_attn,
+    lumina_sample_batch_size,
+    lumina_system_prompt,
+    lumina_gemma2_max_token_length,
+    lumina_timestep_sampling,
+    lumina_sigmoid_scale,
+    lumina_model_prediction_type,
+    lumina_discrete_flow_shift,
+    lumina_train_blocks,
+    lumina_split_qkv,
+    lumina_verbose,
+    lumina_attn_dim,
+    lumina_mlp_dim,
+    lumina_mod_dim,
+    lumina_refiner_dim,
+    lumina_embedder_dims,
+    # Anima parameters
+    anima_dit_path,
+    anima_vae_path,
+    anima_qwen3_path,
+    anima_llm_adapter_path,
+    anima_t5_tokenizer_path,
+    anima_qwen3_max_token_length,
+    anima_t5_max_token_length,
+    anima_discrete_flow_shift,
+    anima_timestep_sample_method,
+    anima_sigmoid_scale,
+    anima_transformer_dtype,
+    anima_flash_attn,
+    anima_cpu_offload_checkpointing,
+    anima_unsloth_offload_checkpointing,
+    anima_blockwise_fused_optimizers,
+    anima_llm_adapter_lr,
+    anima_self_attn_lr,
+    anima_cross_attn_lr,
+    anima_mlp_lr,
+    anima_mod_lr,
+    anima_self_attn_dim,
+    anima_cross_attn_dim,
+    anima_mlp_dim,
+    anima_mod_dim,
+    anima_llm_adapter_dim,
+    anima_emb_dims,
+    anima_train_block_indices,
+    anima_train_llm_adapter,
+    anima_verbose,
     training_preset,
 ):
     # Get list of function parameters and values
@@ -532,6 +614,7 @@ def train_model(
     sdxl_checkbox,
     flux1_checkbox,
     lumina_checkbox,
+    anima_checkbox,
     train_dir,
     image_folder,
     output_dir,
@@ -723,6 +806,36 @@ def train_model(
     lumina_mod_dim,
     lumina_refiner_dim,
     lumina_embedder_dims,
+    # Anima parameters
+    anima_dit_path,
+    anima_vae_path,
+    anima_qwen3_path,
+    anima_llm_adapter_path,
+    anima_t5_tokenizer_path,
+    anima_qwen3_max_token_length,
+    anima_t5_max_token_length,
+    anima_discrete_flow_shift,
+    anima_timestep_sample_method,
+    anima_sigmoid_scale,
+    anima_transformer_dtype,
+    anima_flash_attn,
+    anima_cpu_offload_checkpointing,
+    anima_unsloth_offload_checkpointing,
+    anima_blockwise_fused_optimizers,
+    anima_llm_adapter_lr,
+    anima_self_attn_lr,
+    anima_cross_attn_lr,
+    anima_mlp_lr,
+    anima_mod_lr,
+    anima_self_attn_dim,
+    anima_cross_attn_dim,
+    anima_mlp_dim,
+    anima_mod_dim,
+    anima_llm_adapter_dim,
+    anima_emb_dims,
+    anima_train_block_indices,
+    anima_train_llm_adapter,
+    anima_verbose,
 ):
     # Get list of function parameters and values
     parameters = list(locals().items())
@@ -783,6 +896,13 @@ def train_model(
         if not validate_model_path(lumina_gemma2):
             return TRAIN_BUTTON_VISIBLE
         if not validate_model_path(lumina_ae):
+            return TRAIN_BUTTON_VISIBLE
+    elif anima_checkbox:
+        if not validate_model_path(anima_dit_path):
+            return TRAIN_BUTTON_VISIBLE
+        if not validate_model_path(anima_vae_path):
+            return TRAIN_BUTTON_VISIBLE
+        if not validate_model_path(anima_qwen3_path):
             return TRAIN_BUTTON_VISIBLE
     elif flux1_checkbox:
         if not validate_model_path(ae):
@@ -966,6 +1086,8 @@ def train_model(
         run_cmd.append(rf"{scriptdir}/sd-scripts/sd3_train.py")
     elif lumina_checkbox:
         run_cmd.append(rf"{scriptdir}/sd-scripts/lumina_train.py")
+    elif anima_checkbox:
+        run_cmd.append(rf"{scriptdir}/sd-scripts/anima_train.py")
     elif flux1_checkbox:
         run_cmd.append(rf"{scriptdir}/sd-scripts/flux_train.py")
     else:
@@ -1163,6 +1285,22 @@ def train_model(
         # "cache_text_encoder_outputs": see previous assignment above for code
         # "cache_text_encoder_outputs_to_disk": see previous assignment above for code
         "ae": ae if flux1_checkbox else lumina_ae if lumina_checkbox else None,
+        "dit_path": anima_dit_path if anima_checkbox else None,
+        "vae_path": anima_vae_path if anima_checkbox else None,
+        "qwen3_path": anima_qwen3_path if anima_checkbox else None,
+        "llm_adapter_path": anima_llm_adapter_path if anima_checkbox and anima_llm_adapter_path else None,
+        "t5_tokenizer_path": anima_t5_tokenizer_path if anima_checkbox and anima_t5_tokenizer_path else None,
+        "qwen3_max_token_length": int(anima_qwen3_max_token_length) if anima_checkbox and anima_qwen3_max_token_length else None,
+        "t5_max_token_length": int(anima_t5_max_token_length) if anima_checkbox and anima_t5_max_token_length else None,
+        "transformer_dtype": anima_transformer_dtype if anima_checkbox and anima_transformer_dtype else None,
+        "flash_attn": True if anima_checkbox and anima_flash_attn else None,
+        "unsloth_offload_checkpointing": True if anima_checkbox and anima_unsloth_offload_checkpointing else None,
+        "timestep_sample_method": anima_timestep_sample_method if anima_checkbox else None,
+        "llm_adapter_lr": float(anima_llm_adapter_lr) if anima_checkbox and anima_llm_adapter_lr else None,
+        "self_attn_lr": float(anima_self_attn_lr) if anima_checkbox and anima_self_attn_lr else None,
+        "cross_attn_lr": float(anima_cross_attn_lr) if anima_checkbox and anima_cross_attn_lr else None,
+        "mlp_lr": float(anima_mlp_lr) if anima_checkbox and anima_mlp_lr else None,
+        "mod_lr": float(anima_mod_lr) if anima_checkbox and anima_mod_lr else None,
         # "clip_l": see previous assignment above for code
         # "t5xxl": see previous assignment above for code
         "discrete_flow_shift": (
@@ -1170,6 +1308,8 @@ def train_model(
             if flux1_checkbox
             else lumina_discrete_flow_shift
             if lumina_checkbox
+            else float(anima_discrete_flow_shift)
+            if anima_checkbox and anima_discrete_flow_shift
             else None
         ),
         "model_prediction_type": (
@@ -1191,11 +1331,17 @@ def train_model(
         "t5xxl_max_token_length": t5xxl_max_token_length if flux1_checkbox else None,
         "guidance_scale": guidance_scale if flux1_checkbox else None,
         "blockwise_fused_optimizers": (
-            blockwise_fused_optimizers if flux1_checkbox or lumina_checkbox else None
+            blockwise_fused_optimizers
+            if flux1_checkbox or lumina_checkbox
+            else anima_blockwise_fused_optimizers
+            if anima_checkbox
+            else None
         ),
         "cpu_offload_checkpointing": (
             cpu_offload_checkpointing
             if flux1_checkbox or lumina_checkbox
+            else anima_cpu_offload_checkpointing
+            if anima_checkbox
             else None
         ),
         "blocks_to_swap": (
@@ -1224,6 +1370,8 @@ def train_model(
         "sigmoid_scale": (
             float(lumina_sigmoid_scale)
             if lumina_checkbox and lumina_sigmoid_scale not in [None, ""]
+            else float(anima_sigmoid_scale)
+            if anima_checkbox and anima_sigmoid_scale not in [None, ""]
             else None
         ),
         "use_flash_attn": True if lumina_checkbox and lumina_use_flash_attn else None,
@@ -1438,6 +1586,14 @@ def finetune_tab(
                 finetuning=True,
             )
 
+            # Add Anima Parameters
+            anima_training = animaTraining(
+                headless=headless,
+                config=config,
+                anima_checkbox=source_model.anima_checkbox,
+                finetuning=True,
+            )
+
             # Add SD3 Parameters
             sd3_training = sd3Training(
                 headless=headless, config=config, sd3_checkbox=source_model.sd3_checkbox
@@ -1492,6 +1648,7 @@ def finetune_tab(
             source_model.sdxl_checkbox,
             source_model.flux1_checkbox,
             source_model.lumina_checkbox,
+            source_model.anima_checkbox,
             train_dir,
             image_folder,
             output_dir,
@@ -1682,6 +1839,36 @@ def finetune_tab(
             lumina_training.mod_dim,
             lumina_training.refiner_dim,
             lumina_training.embedder_dims,
+            # Anima parameters
+            anima_training.dit_path,
+            anima_training.vae_path,
+            anima_training.qwen3_path,
+            anima_training.llm_adapter_path,
+            anima_training.t5_tokenizer_path,
+            anima_training.qwen3_max_token_length,
+            anima_training.t5_max_token_length,
+            anima_training.discrete_flow_shift,
+            anima_training.timestep_sample_method,
+            anima_training.sigmoid_scale,
+            anima_training.transformer_dtype,
+            anima_training.flash_attn,
+            anima_training.cpu_offload_checkpointing,
+            anima_training.unsloth_offload_checkpointing,
+            anima_training.blockwise_fused_optimizers,
+            anima_training.llm_adapter_lr,
+            anima_training.self_attn_lr,
+            anima_training.cross_attn_lr,
+            anima_training.mlp_lr,
+            anima_training.mod_lr,
+            anima_training.self_attn_dim,
+            anima_training.cross_attn_dim,
+            anima_training.mlp_dim,
+            anima_training.mod_dim,
+            anima_training.llm_adapter_dim,
+            anima_training.emb_dims,
+            anima_training.train_block_indices,
+            anima_training.train_llm_adapter,
+            anima_training.verbose,
         ]
 
         configuration.button_open_config.click(

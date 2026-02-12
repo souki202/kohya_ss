@@ -1,4 +1,4 @@
-import gradio as gr
+﻿import gradio as gr
 import json
 import math
 import os
@@ -43,6 +43,7 @@ from .class_metadata import MetaData
 from .class_gui_config import KohyaSSGUIConfig
 from .class_flux1 import flux1Training
 from .class_lumina import luminaTraining
+from .class_anima import animaTraining
 
 from .dreambooth_folder_creation_gui import (
     gradio_dreambooth_folder_creation_tab,
@@ -62,7 +63,7 @@ huggingface = None
 use_shell = False
 train_state_value = time.time()
 
-document_symbol = "\U0001f4c4"  # 📄
+document_symbol = "\U0001f4c4"  # 塘
 
 
 presets_dir = rf"{scriptdir}/presets"
@@ -87,6 +88,7 @@ def save_configuration(
     sdxl,
     flux1_checkbox,
     lumina_checkbox,
+    anima_checkbox,
     dataset_config,
     save_model_as,
     save_precision,
@@ -285,6 +287,36 @@ def save_configuration(
     lumina_mod_dim,
     lumina_refiner_dim,
     lumina_embedder_dims,
+    # Anima
+    anima_dit_path,
+    anima_vae_path,
+    anima_qwen3_path,
+    anima_llm_adapter_path,
+    anima_t5_tokenizer_path,
+    anima_qwen3_max_token_length,
+    anima_t5_max_token_length,
+    anima_discrete_flow_shift,
+    anima_timestep_sample_method,
+    anima_sigmoid_scale,
+    anima_transformer_dtype,
+    anima_flash_attn,
+    anima_cpu_offload_checkpointing,
+    anima_unsloth_offload_checkpointing,
+    anima_blockwise_fused_optimizers,
+    anima_llm_adapter_lr,
+    anima_self_attn_lr,
+    anima_cross_attn_lr,
+    anima_mlp_lr,
+    anima_mod_lr,
+    anima_self_attn_dim,
+    anima_cross_attn_dim,
+    anima_mlp_dim,
+    anima_mod_dim,
+    anima_llm_adapter_dim,
+    anima_emb_dims,
+    anima_train_block_indices,
+    anima_train_llm_adapter,
+    anima_verbose,
     # Flux1
     flux1_cache_text_encoder_outputs,
     flux1_cache_text_encoder_outputs_to_disk,
@@ -394,6 +426,7 @@ def open_configuration(
     sdxl,
     flux1_checkbox,
     lumina_checkbox,
+    anima_checkbox,
     dataset_config,
     save_model_as,
     save_precision,
@@ -592,6 +625,36 @@ def open_configuration(
     lumina_mod_dim,
     lumina_refiner_dim,
     lumina_embedder_dims,
+    # Anima
+    anima_dit_path,
+    anima_vae_path,
+    anima_qwen3_path,
+    anima_llm_adapter_path,
+    anima_t5_tokenizer_path,
+    anima_qwen3_max_token_length,
+    anima_t5_max_token_length,
+    anima_discrete_flow_shift,
+    anima_timestep_sample_method,
+    anima_sigmoid_scale,
+    anima_transformer_dtype,
+    anima_flash_attn,
+    anima_cpu_offload_checkpointing,
+    anima_unsloth_offload_checkpointing,
+    anima_blockwise_fused_optimizers,
+    anima_llm_adapter_lr,
+    anima_self_attn_lr,
+    anima_cross_attn_lr,
+    anima_mlp_lr,
+    anima_mod_lr,
+    anima_self_attn_dim,
+    anima_cross_attn_dim,
+    anima_mlp_dim,
+    anima_mod_dim,
+    anima_llm_adapter_dim,
+    anima_emb_dims,
+    anima_train_block_indices,
+    anima_train_llm_adapter,
+    anima_verbose,
     # Flux1
     flux1_cache_text_encoder_outputs,
     flux1_cache_text_encoder_outputs_to_disk,
@@ -792,6 +855,7 @@ def train_model(
     sdxl,
     flux1_checkbox,
     lumina_checkbox,
+    anima_checkbox,
     dataset_config,
     save_model_as,
     save_precision,
@@ -990,6 +1054,36 @@ def train_model(
     lumina_mod_dim,
     lumina_refiner_dim,
     lumina_embedder_dims,
+    # Anima
+    anima_dit_path,
+    anima_vae_path,
+    anima_qwen3_path,
+    anima_llm_adapter_path,
+    anima_t5_tokenizer_path,
+    anima_qwen3_max_token_length,
+    anima_t5_max_token_length,
+    anima_discrete_flow_shift,
+    anima_timestep_sample_method,
+    anima_sigmoid_scale,
+    anima_transformer_dtype,
+    anima_flash_attn,
+    anima_cpu_offload_checkpointing,
+    anima_unsloth_offload_checkpointing,
+    anima_blockwise_fused_optimizers,
+    anima_llm_adapter_lr,
+    anima_self_attn_lr,
+    anima_cross_attn_lr,
+    anima_mlp_lr,
+    anima_mod_lr,
+    anima_self_attn_dim,
+    anima_cross_attn_dim,
+    anima_mlp_dim,
+    anima_mod_dim,
+    anima_llm_adapter_dim,
+    anima_emb_dims,
+    anima_train_block_indices,
+    anima_train_llm_adapter,
+    anima_verbose,
     # Flux1
     flux1_cache_text_encoder_outputs,
     flux1_cache_text_encoder_outputs_to_disk,
@@ -1089,6 +1183,12 @@ def train_model(
             log.error("LoRA type must be set to 'Lumina' if Lumina checkbox is checked.")
             return TRAIN_BUTTON_VISIBLE
 
+    if anima_checkbox:
+        log.info("Validating LoRA type is Anima when Anima checkbox is checked...")
+        if LoRA_type != "Anima":
+            log.error("LoRA type must be set to 'Anima' if Anima checkbox is checked.")
+            return TRAIN_BUTTON_VISIBLE
+
     #
     # Validate paths
     #
@@ -1135,6 +1235,14 @@ def train_model(
         if not validate_model_path(lumina_gemma2):
             return TRAIN_BUTTON_VISIBLE
         if not validate_model_path(lumina_ae):
+            return TRAIN_BUTTON_VISIBLE
+
+    if anima_checkbox:
+        if not validate_model_path(anima_dit_path):
+            return TRAIN_BUTTON_VISIBLE
+        if not validate_model_path(anima_vae_path):
+            return TRAIN_BUTTON_VISIBLE
+        if not validate_model_path(anima_qwen3_path):
             return TRAIN_BUTTON_VISIBLE
 
     #
@@ -1337,6 +1445,8 @@ def train_model(
 
     if sdxl:
         run_cmd.append(rf"{scriptdir}/sd-scripts/sdxl_train_network.py")
+    elif anima_checkbox:
+        run_cmd.append(rf"{scriptdir}/sd-scripts/anima_train_network.py")
     elif lumina_checkbox:
         run_cmd.append(rf"{scriptdir}/sd-scripts/lumina_train_network.py")
     elif flux1_checkbox:
@@ -1401,6 +1511,26 @@ def train_model(
         if lumina_split_qkv:
             network_args += " split_qkv=True"
         if lumina_verbose:
+            network_args += " verbose=True"
+
+    if LoRA_type == "Anima":
+        network_module = "networks.lora_anima"
+        anima_arg_map = {
+            "self_attn_dim": anima_self_attn_dim,
+            "cross_attn_dim": anima_cross_attn_dim,
+            "mlp_dim": anima_mlp_dim,
+            "mod_dim": anima_mod_dim,
+            "llm_adapter_dim": anima_llm_adapter_dim,
+            "emb_dims": anima_emb_dims,
+        }
+        for key, value in anima_arg_map.items():
+            if value:
+                network_args += f" {key}={value}"
+        if anima_train_block_indices and anima_train_block_indices not in [None, ""]:
+            network_args += f" train_block_indices={anima_train_block_indices}"
+        if anima_train_llm_adapter:
+            network_args += " train_llm_adapter=True"
+        if anima_verbose:
             network_args += " verbose=True"
 
     if LoRA_type in ["Flux1"]:
@@ -1862,6 +1992,8 @@ def train_model(
             if flux1_checkbox
             else float(lumina_discrete_flow_shift)
             if lumina_checkbox
+            else float(anima_discrete_flow_shift)
+            if anima_checkbox
             else None
         ),
         "model_prediction_type": (
@@ -1881,6 +2013,8 @@ def train_model(
         "sigmoid_scale": (
             float(lumina_sigmoid_scale)
             if lumina_checkbox and lumina_sigmoid_scale not in [None, ""]
+            else float(anima_sigmoid_scale)
+            if anima_checkbox and anima_sigmoid_scale not in [None, ""]
             else None
         ),
         "split_mode": split_mode if flux1_checkbox else None,
@@ -1891,11 +2025,41 @@ def train_model(
         "mem_eff_save": mem_eff_save if flux1_checkbox else None,
         "apply_t5_attn_mask": apply_t5_attn_mask if flux1_checkbox else None,
         "cpu_offload_checkpointing": (
-            cpu_offload_checkpointing if flux1_checkbox else None
+            cpu_offload_checkpointing if flux1_checkbox
+            else anima_cpu_offload_checkpointing if anima_checkbox
+            else None
         ),
         "blocks_to_swap": blocks_to_swap if flux1_checkbox or sd3_checkbox else None,
         "single_blocks_to_swap": single_blocks_to_swap if flux1_checkbox else None,
         "double_blocks_to_swap": double_blocks_to_swap if flux1_checkbox else None,
+        # Anima specific parameters
+        "dit_path": anima_dit_path if anima_checkbox and anima_dit_path else None,
+        "vae_path": anima_vae_path if anima_checkbox and anima_vae_path else None,
+        "qwen3_path": anima_qwen3_path if anima_checkbox and anima_qwen3_path else None,
+        "llm_adapter_path": anima_llm_adapter_path if anima_checkbox and anima_llm_adapter_path else None,
+        "t5_tokenizer_path": anima_t5_tokenizer_path if anima_checkbox and anima_t5_tokenizer_path else None,
+        "qwen3_max_token_length": (
+            int(anima_qwen3_max_token_length)
+            if anima_checkbox and anima_qwen3_max_token_length not in [None, "", 0]
+            else None
+        ),
+        "t5_max_token_length": (
+            int(anima_t5_max_token_length)
+            if anima_checkbox and anima_t5_max_token_length not in [None, "", 0]
+            else None
+        ),
+        "timestep_sample_method": (
+            anima_timestep_sample_method if anima_checkbox else None
+        ),
+        "transformer_dtype": (
+            anima_transformer_dtype
+            if anima_checkbox and anima_transformer_dtype not in [None, "", "None"]
+            else None
+        ),
+        "flash_attn": True if anima_checkbox and anima_flash_attn else None,
+        "unsloth_offload_checkpointing": (
+            True if anima_checkbox and anima_unsloth_offload_checkpointing else None
+        ),
     }
 
     # Given dictionary `config_toml_data`
@@ -2058,6 +2222,7 @@ def lora_tab(
                     LoRA_type = gr.Dropdown(
                         label="LoRA type",
                         choices=[
+                            "Anima",
                             "Flux1",
                             "Flux1 OFT",
                             "Lumina",
@@ -2377,6 +2542,7 @@ def lora_tab(
                                     "Flux1",
                                     "Flux1 OFT",
                                     "Lumina",
+                                    "Anima",
                                     "Kohya DyLoRA",
                                     "Kohya LoCon",
                                     "LoRA-FA",
@@ -2418,6 +2584,7 @@ def lora_tab(
                                     "Flux1",
                                     "Flux1 OFT",
                                     "Lumina",
+                                    "Anima",
                                     "Standard",
                                     "Kohya DyLoRA",
                                     "Kohya LoCon",
@@ -2433,6 +2600,7 @@ def lora_tab(
                                     "Flux1",
                                     "Flux1 OFT",
                                     "Lumina",
+                                    "Anima",
                                     "Standard",
                                     "LoCon",
                                     "Kohya DyLoRA",
@@ -2456,6 +2624,7 @@ def lora_tab(
                                     "Flux1",
                                     "Flux1 OFT",
                                     "Lumina",
+                                    "Anima",
                                     "Standard",
                                     "LoCon",
                                     "Kohya DyLoRA",
@@ -2479,6 +2648,7 @@ def lora_tab(
                                     "Flux1",
                                     "Flux1 OFT",
                                     "Lumina",
+                                    "Anima",
                                     "Standard",
                                     "LoCon",
                                     "Kohya DyLoRA",
@@ -2670,6 +2840,7 @@ def lora_tab(
                                     "LyCORIS/LoCon",
                                     "LyCORIS/LoKr",
                                     "Lumina",
+                                    "Anima",
                                     "Standard",
                                 },
                             },
@@ -2692,6 +2863,7 @@ def lora_tab(
                                     "LyCORIS/LoKr",
                                     "LyCORIS/Native Fine-Tuning",
                                     "Lumina",
+                                    "Anima",
                                     "Standard",
                                 },
                             },
@@ -2713,6 +2885,7 @@ def lora_tab(
                                     "LoRA-FA",
                                     "LyCORIS/Native Fine-Tuning",
                                     "Lumina",
+                                    "Anima",
                                     "Standard",
                                 },
                             },
@@ -2734,6 +2907,7 @@ def lora_tab(
                                     "LyCORIS/Native Fine-Tuning",
                                     "LoRA-FA",
                                     "Lumina",
+                                    "Anima",
                                     "Standard",
                                 },
                             },
@@ -2799,6 +2973,7 @@ def lora_tab(
                                     "LoRA-FA",
                                     "LyCORIS/Native Fine-Tuning",
                                     "Lumina",
+                                    "Anima",
                                     "Standard",
                                 },
                             },
@@ -2818,6 +2993,13 @@ def lora_tab(
                     headless=headless,
                     config=config,
                     lumina_checkbox=source_model.lumina_checkbox,
+                )
+
+                # Add Anima parameters to the basic training accordion
+                anima_training = animaTraining(
+                    headless=headless,
+                    config=config,
+                    anima_checkbox=source_model.anima_checkbox,
                 )
 
                 # Add FLUX1 Parameters to the basic training accordion
@@ -2957,6 +3139,7 @@ def lora_tab(
             source_model.sdxl_checkbox,
             source_model.flux1_checkbox,
             source_model.lumina_checkbox,
+            source_model.anima_checkbox,
             source_model.dataset_config,
             source_model.save_model_as,
             source_model.save_precision,
@@ -3147,6 +3330,36 @@ def lora_tab(
             lumina_training.mod_dim,
             lumina_training.refiner_dim,
             lumina_training.embedder_dims,
+            # Anima parameters
+            anima_training.dit_path,
+            anima_training.vae_path,
+            anima_training.qwen3_path,
+            anima_training.llm_adapter_path,
+            anima_training.t5_tokenizer_path,
+            anima_training.qwen3_max_token_length,
+            anima_training.t5_max_token_length,
+            anima_training.discrete_flow_shift,
+            anima_training.timestep_sample_method,
+            anima_training.sigmoid_scale,
+            anima_training.transformer_dtype,
+            anima_training.flash_attn,
+            anima_training.cpu_offload_checkpointing,
+            anima_training.unsloth_offload_checkpointing,
+            anima_training.blockwise_fused_optimizers,
+            anima_training.llm_adapter_lr,
+            anima_training.self_attn_lr,
+            anima_training.cross_attn_lr,
+            anima_training.mlp_lr,
+            anima_training.mod_lr,
+            anima_training.self_attn_dim,
+            anima_training.cross_attn_dim,
+            anima_training.mlp_dim,
+            anima_training.mod_dim,
+            anima_training.llm_adapter_dim,
+            anima_training.emb_dims,
+            anima_training.train_block_indices,
+            anima_training.train_llm_adapter,
+            anima_training.verbose,
             # Flux1 parameters
             flux1_training.flux1_cache_text_encoder_outputs,
             flux1_training.flux1_cache_text_encoder_outputs_to_disk,
