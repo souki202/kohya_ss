@@ -296,12 +296,14 @@ def save_configuration(
     anima_qwen3_max_token_length,
     anima_t5_max_token_length,
     anima_discrete_flow_shift,
-    anima_timestep_sample_method,
+    anima_timestep_sampling,
     anima_sigmoid_scale,
-    anima_transformer_dtype,
-    anima_flash_attn,
+    anima_attn_mode,
+    anima_split_attn,
     anima_cpu_offload_checkpointing,
     anima_unsloth_offload_checkpointing,
+    anima_vae_chunk_size,
+    anima_vae_disable_cache,
     anima_blockwise_fused_optimizers,
     anima_llm_adapter_lr,
     anima_self_attn_lr,
@@ -634,12 +636,14 @@ def open_configuration(
     anima_qwen3_max_token_length,
     anima_t5_max_token_length,
     anima_discrete_flow_shift,
-    anima_timestep_sample_method,
+    anima_timestep_sampling,
     anima_sigmoid_scale,
-    anima_transformer_dtype,
-    anima_flash_attn,
+    anima_attn_mode,
+    anima_split_attn,
     anima_cpu_offload_checkpointing,
     anima_unsloth_offload_checkpointing,
+    anima_vae_chunk_size,
+    anima_vae_disable_cache,
     anima_blockwise_fused_optimizers,
     anima_llm_adapter_lr,
     anima_self_attn_lr,
@@ -1063,12 +1067,14 @@ def train_model(
     anima_qwen3_max_token_length,
     anima_t5_max_token_length,
     anima_discrete_flow_shift,
-    anima_timestep_sample_method,
+    anima_timestep_sampling,
     anima_sigmoid_scale,
-    anima_transformer_dtype,
-    anima_flash_attn,
+    anima_attn_mode,
+    anima_split_attn,
     anima_cpu_offload_checkpointing,
     anima_unsloth_offload_checkpointing,
+    anima_vae_chunk_size,
+    anima_vae_disable_cache,
     anima_blockwise_fused_optimizers,
     anima_llm_adapter_lr,
     anima_self_attn_lr,
@@ -1893,7 +1899,9 @@ def train_model(
         "output_dir": output_dir,
         "output_name": output_name,
         "persistent_data_loader_workers": int(persistent_data_loader_workers),
-        "pretrained_model_name_or_path": pretrained_model_name_or_path,
+        "pretrained_model_name_or_path": (
+            anima_dit_path if anima_checkbox and anima_dit_path else pretrained_model_name_or_path
+        ),
         "prior_loss_weight": prior_loss_weight,
         "random_crop": random_crop,
         "reg_data_dir": reg_data_dir,
@@ -1932,7 +1940,7 @@ def train_model(
         "save_state_to_huggingface": save_state_to_huggingface,
         "scale_v_pred_loss_like_noise_pred": scale_v_pred_loss_like_noise_pred,
         "scale_weight_norms": scale_weight_norms,
-        "sdpa": True if xformers == "sdpa" else None,
+        "sdpa": True if xformers == "sdpa" and not anima_checkbox else None,
         "seed": int(seed) if int(seed) != 0 else None,
         "shuffle_caption": shuffle_caption,
         "skip_cache_check": skip_cache_check,
@@ -1949,12 +1957,12 @@ def train_model(
         "v2": v2,
         "v_parameterization": v_parameterization,
         "v_pred_like_loss": v_pred_like_loss if v_pred_like_loss != 0 else None,
-        "vae": vae,
+        "vae": anima_vae_path if anima_checkbox and anima_vae_path else vae,
         "vae_batch_size": vae_batch_size if vae_batch_size != 0 else None,
         "wandb_api_key": wandb_api_key,
         "wandb_run_name": wandb_run_name if wandb_run_name != "" else output_name,
         "weighted_captions": weighted_captions,
-        "xformers": True if xformers == "xformers" else None,
+        "xformers": True if xformers == "xformers" and not anima_checkbox else None,
     "use_flash_attn": True if lumina_checkbox and lumina_use_flash_attn else None,
     "use_sage_attn": True if lumina_checkbox and lumina_use_sage_attn else None,
         # SD3 only Parameters
@@ -2008,6 +2016,8 @@ def train_model(
             if flux1_checkbox
             else lumina_timestep_sampling
             if lumina_checkbox
+            else anima_timestep_sampling
+            if anima_checkbox
             else None
         ),
         "sigmoid_scale": (
@@ -2033,9 +2043,7 @@ def train_model(
         "single_blocks_to_swap": single_blocks_to_swap if flux1_checkbox else None,
         "double_blocks_to_swap": double_blocks_to_swap if flux1_checkbox else None,
         # Anima specific parameters
-        "dit_path": anima_dit_path if anima_checkbox and anima_dit_path else None,
-        "vae_path": anima_vae_path if anima_checkbox and anima_vae_path else None,
-        "qwen3_path": anima_qwen3_path if anima_checkbox and anima_qwen3_path else None,
+        "qwen3": anima_qwen3_path if anima_checkbox and anima_qwen3_path else None,
         "llm_adapter_path": anima_llm_adapter_path if anima_checkbox and anima_llm_adapter_path else None,
         "t5_tokenizer_path": anima_t5_tokenizer_path if anima_checkbox and anima_t5_tokenizer_path else None,
         "qwen3_max_token_length": (
@@ -2048,15 +2056,18 @@ def train_model(
             if anima_checkbox and anima_t5_max_token_length not in [None, "", 0]
             else None
         ),
-        "timestep_sample_method": (
-            anima_timestep_sample_method if anima_checkbox else None
-        ),
-        "transformer_dtype": (
-            anima_transformer_dtype
-            if anima_checkbox and anima_transformer_dtype not in [None, "", "None"]
+        "attn_mode": (
+            anima_attn_mode
+            if anima_checkbox and anima_attn_mode not in [None, "", "None"]
             else None
         ),
-        "flash_attn": True if anima_checkbox and anima_flash_attn else None,
+        "split_attn": True if anima_checkbox and anima_split_attn else None,
+        "vae_chunk_size": (
+            int(anima_vae_chunk_size)
+            if anima_checkbox and anima_vae_chunk_size not in [None, "", 0]
+            else None
+        ),
+        "vae_disable_cache": True if anima_checkbox and anima_vae_disable_cache else None,
         "unsloth_offload_checkpointing": (
             True if anima_checkbox and anima_unsloth_offload_checkpointing else None
         ),
@@ -3339,12 +3350,14 @@ def lora_tab(
             anima_training.qwen3_max_token_length,
             anima_training.t5_max_token_length,
             anima_training.discrete_flow_shift,
-            anima_training.timestep_sample_method,
+            anima_training.timestep_sampling,
             anima_training.sigmoid_scale,
-            anima_training.transformer_dtype,
-            anima_training.flash_attn,
+            anima_training.attn_mode,
+            anima_training.split_attn,
             anima_training.cpu_offload_checkpointing,
             anima_training.unsloth_offload_checkpointing,
+            anima_training.vae_chunk_size,
+            anima_training.vae_disable_cache,
             anima_training.blockwise_fused_optimizers,
             anima_training.llm_adapter_lr,
             anima_training.self_attn_lr,

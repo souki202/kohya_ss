@@ -27,7 +27,7 @@ class animaTraining:
                 with gr.Row():
                     self.dit_path = gr.Textbox(
                         label="DiT Path",
-                        placeholder="Path to Anima DiT model safetensors file",
+                        placeholder="Path to Anima DiT model (overrides Pretrained model path when Anima is enabled)",
                         value=self.config.get("anima.dit_path", ""),
                         interactive=True,
                     )
@@ -144,10 +144,10 @@ class animaTraining:
                         step=0.1,
                         interactive=True,
                     )
-                    self.timestep_sample_method = gr.Dropdown(
-                        label="Timestep Sample Method",
-                        choices=["logit_normal", "uniform"],
-                        value=self.config.get("anima.timestep_sample_method", "logit_normal"),
+                    self.timestep_sampling = gr.Dropdown(
+                        label="Timestep Sampling",
+                        choices=["sigma", "uniform", "sigmoid", "shift", "flux_shift"],
+                        value=self.config.get("anima.timestep_sampling", "sigmoid"),
                         interactive=True,
                     )
                     self.sigmoid_scale = gr.Number(
@@ -160,15 +160,15 @@ class animaTraining:
                     )
 
                 with gr.Row():
-                    self.transformer_dtype = gr.Dropdown(
-                        label="Transformer Dtype",
-                        choices=["None", "float16", "bfloat16", "float32"],
-                        value=self.config.get("anima.transformer_dtype", "None"),
+                    self.attn_mode = gr.Dropdown(
+                        label="Attention Mode",
+                        choices=["None", "torch", "xformers", "flash", "sageattn", "sdpa"],
+                        value=self.config.get("anima.attn_mode", "None"),
                         interactive=True,
                     )
-                    self.flash_attn = gr.Checkbox(
-                        label="Flash Attention",
-                        value=self.config.get("anima.flash_attn", False),
+                    self.split_attn = gr.Checkbox(
+                        label="Split Attention",
+                        value=self.config.get("anima.split_attn", False),
                         interactive=True,
                     )
                     self.cpu_offload_checkpointing = gr.Checkbox(
@@ -179,6 +179,22 @@ class animaTraining:
                     self.unsloth_offload_checkpointing = gr.Checkbox(
                         label="Unsloth Offload Checkpointing",
                         value=self.config.get("anima.unsloth_offload_checkpointing", False),
+                        interactive=True,
+                    )
+
+                with gr.Row():
+                    self.vae_chunk_size = gr.Number(
+                        label="VAE Chunk Size",
+                        value=self.config.get("anima.vae_chunk_size", 0),
+                        minimum=0,
+                        maximum=4096,
+                        step=2,
+                        interactive=True,
+                        info="Spatial chunk size for VAE (even number, 0=disabled)",
+                    )
+                    self.vae_disable_cache = gr.Checkbox(
+                        label="VAE Disable Cache",
+                        value=self.config.get("anima.vae_disable_cache", False),
                         interactive=True,
                     )
 
