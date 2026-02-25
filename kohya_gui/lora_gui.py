@@ -1191,8 +1191,8 @@ def train_model(
 
     if anima_checkbox:
         log.info("Validating LoRA type is Anima when Anima checkbox is checked...")
-        if LoRA_type != "Anima":
-            log.error("LoRA type must be set to 'Anima' if Anima checkbox is checked.")
+        if LoRA_type not in ("Anima", "Anima LoHa", "Anima LoKr"):
+            log.error("LoRA type must be set to 'Anima', 'Anima LoHa' or 'Anima LoKr' if Anima checkbox is checked.")
             return TRAIN_BUTTON_VISIBLE
 
     #
@@ -1534,6 +1534,25 @@ def train_model(
                 network_args += f" {key}={value}"
         if anima_train_block_indices and anima_train_block_indices not in [None, ""]:
             network_args += f" train_block_indices={anima_train_block_indices}"
+        if anima_train_llm_adapter:
+            network_args += " train_llm_adapter=True"
+        if anima_verbose:
+            network_args += " verbose=True"
+
+    if LoRA_type == "Anima LoHa":
+        network_module = "networks.loha"
+        if use_tucker:
+            network_args += f" use_tucker={use_tucker}"
+        if anima_train_llm_adapter:
+            network_args += " train_llm_adapter=True"
+        if anima_verbose:
+            network_args += " verbose=True"
+
+    if LoRA_type == "Anima LoKr":
+        network_module = "networks.lokr"
+        network_args += f" factor={factor}"
+        if use_tucker:
+            network_args += f" use_tucker={use_tucker}"
         if anima_train_llm_adapter:
             network_args += " train_llm_adapter=True"
         if anima_verbose:
@@ -2234,6 +2253,8 @@ def lora_tab(
                         label="LoRA type",
                         choices=[
                             "Anima",
+                            "Anima LoHa",
+                            "Anima LoKr",
                             "Flux1",
                             "Flux1 OFT",
                             "Lumina",
@@ -2554,6 +2575,8 @@ def lora_tab(
                                     "Flux1 OFT",
                                     "Lumina",
                                     "Anima",
+                                    "Anima LoHa",
+                                    "Anima LoKr",
                                     "Kohya DyLoRA",
                                     "Kohya LoCon",
                                     "LoRA-FA",
@@ -2596,6 +2619,8 @@ def lora_tab(
                                     "Flux1 OFT",
                                     "Lumina",
                                     "Anima",
+                                    "Anima LoHa",
+                                    "Anima LoKr",
                                     "Standard",
                                     "Kohya DyLoRA",
                                     "Kohya LoCon",
@@ -2612,6 +2637,8 @@ def lora_tab(
                                     "Flux1 OFT",
                                     "Lumina",
                                     "Anima",
+                                    "Anima LoHa",
+                                    "Anima LoKr",
                                     "Standard",
                                     "LoCon",
                                     "Kohya DyLoRA",
@@ -2636,6 +2663,8 @@ def lora_tab(
                                     "Flux1 OFT",
                                     "Lumina",
                                     "Anima",
+                                    "Anima LoHa",
+                                    "Anima LoKr",
                                     "Standard",
                                     "LoCon",
                                     "Kohya DyLoRA",
@@ -2660,6 +2689,8 @@ def lora_tab(
                                     "Flux1 OFT",
                                     "Lumina",
                                     "Anima",
+                                    "Anima LoHa",
+                                    "Anima LoKr",
                                     "Standard",
                                     "LoCon",
                                     "Kohya DyLoRA",
@@ -2680,6 +2711,7 @@ def lora_tab(
                             "update_params": {
                                 "visible": LoRA_type
                                 in {
+                                    "Anima LoKr",
                                     "LyCORIS/LoKr",
                                 },
                             },
@@ -2754,6 +2786,8 @@ def lora_tab(
                             "update_params": {
                                 "visible": LoRA_type
                                 in {
+                                    "Anima LoHa",
+                                    "Anima LoKr",
                                     "LyCORIS/BOFT",
                                     "LyCORIS/Diag-OFT",
                                     "LyCORIS/DyLoRA",
@@ -2852,6 +2886,8 @@ def lora_tab(
                                     "LyCORIS/LoKr",
                                     "Lumina",
                                     "Anima",
+                                    "Anima LoHa",
+                                    "Anima LoKr",
                                     "Standard",
                                 },
                             },
@@ -2875,6 +2911,8 @@ def lora_tab(
                                     "LyCORIS/Native Fine-Tuning",
                                     "Lumina",
                                     "Anima",
+                                    "Anima LoHa",
+                                    "Anima LoKr",
                                     "Standard",
                                 },
                             },
@@ -2897,6 +2935,8 @@ def lora_tab(
                                     "LyCORIS/Native Fine-Tuning",
                                     "Lumina",
                                     "Anima",
+                                    "Anima LoHa",
+                                    "Anima LoKr",
                                     "Standard",
                                 },
                             },
@@ -2919,6 +2959,8 @@ def lora_tab(
                                     "LoRA-FA",
                                     "Lumina",
                                     "Anima",
+                                    "Anima LoHa",
+                                    "Anima LoKr",
                                     "Standard",
                                 },
                             },
@@ -2955,6 +2997,8 @@ def lora_tab(
                             "update_params": {
                                 "visible": LoRA_type
                                 in {
+                                    "Anima LoHa",
+                                    "Anima LoKr",
                                     "LyCORIS/DyLoRA",
                                     "LyCORIS/iA3",
                                     "LyCORIS/BOFT",
@@ -2985,6 +3029,8 @@ def lora_tab(
                                     "LyCORIS/Native Fine-Tuning",
                                     "Lumina",
                                     "Anima",
+                                    "Anima LoHa",
+                                    "Anima LoKr",
                                     "Standard",
                                 },
                             },
