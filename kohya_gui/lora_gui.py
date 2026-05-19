@@ -44,6 +44,7 @@ from .class_gui_config import KohyaSSGUIConfig
 from .class_flux1 import flux1Training
 from .class_lumina import luminaTraining
 from .class_anima import animaTraining
+from .class_leco import lecoTraining
 
 from .dreambooth_folder_creation_gui import (
     gradio_dreambooth_folder_creation_tab,
@@ -375,6 +376,10 @@ def save_configuration(
     sd3_text_encoder_batch_size,
     weighting_scheme,
     sd3_checkbox,
+    # LECO parameters
+    leco_prompts_file,
+    leco_max_denoising_steps,
+    leco_denoise_guidance_scale,
 ):
     # Get list of function parameters and values
     parameters = list(locals().items())
@@ -715,6 +720,10 @@ def open_configuration(
     sd3_text_encoder_batch_size,
     weighting_scheme,
     sd3_checkbox,
+    # LECO parameters
+    leco_prompts_file,
+    leco_max_denoising_steps,
+    leco_denoise_guidance_scale,
     ##
     training_preset,
 ):
@@ -783,6 +792,8 @@ def open_configuration(
         "LyCORIS/LoKr",
         "LyCORIS/LoCon",
         "LyCORIS/GLoRA",
+        "SDXL LoHa",
+        "SDXL LoKr",
     }:
         values.append(gr.Row(visible=True))
     else:
@@ -1146,6 +1157,10 @@ def train_model(
     sd3_text_encoder_batch_size,
     weighting_scheme,
     sd3_checkbox,
+    # LECO parameters
+    leco_prompts_file,
+    leco_max_denoising_steps,
+    leco_denoise_guidance_scale,
 ):
     # Get list of function parameters and values
     parameters = list(locals().items())
@@ -1193,6 +1208,25 @@ def train_model(
         log.info("Validating LoRA type is Anima when Anima checkbox is checked...")
         if LoRA_type not in ("Anima", "Anima LoHa", "Anima LoKr"):
             log.error("LoRA type must be set to 'Anima', 'Anima LoHa' or 'Anima LoKr' if Anima checkbox is checked.")
+            return TRAIN_BUTTON_VISIBLE
+
+    is_leco = LoRA_type == "LECO"
+    is_sdxl_loha = LoRA_type == "SDXL LoHa"
+    is_sdxl_lokr = LoRA_type == "SDXL LoKr"
+
+    if is_sdxl_loha or is_sdxl_lokr:
+        if not sdxl:
+            log.error(f"SDXL checkbox must be enabled when using '{LoRA_type}'.")
+            return TRAIN_BUTTON_VISIBLE
+
+    if is_leco:
+        if flux1_checkbox or lumina_checkbox or anima_checkbox or sd3_checkbox:
+            log.error("LECO currently supports SD1.x/2.x and SDXL only.")
+            return TRAIN_BUTTON_VISIBLE
+        if not leco_prompts_file:
+            log.error("LECO requires a prompts file to be specified.")
+            return TRAIN_BUTTON_VISIBLE
+        if not validate_file_path(leco_prompts_file):
             return TRAIN_BUTTON_VISIBLE
 
     #
@@ -1449,7 +1483,12 @@ def train_model(
         extra_accelerate_launch_args=extra_accelerate_launch_args,
     )
 
-    if sdxl:
+    if is_leco:
+        if sdxl:
+            run_cmd.append(rf"{scriptdir}/sd-scripts/sdxl_train_leco.py")
+        else:
+            run_cmd.append(rf"{scriptdir}/sd-scripts/train_leco.py")
+    elif sdxl:
         run_cmd.append(rf"{scriptdir}/sd-scripts/sdxl_train_network.py")
     elif anima_checkbox:
         run_cmd.append(rf"{scriptdir}/sd-scripts/anima_train_network.py")
@@ -1557,6 +1596,28 @@ def train_model(
             network_args += " train_llm_adapter=True"
         if anima_verbose:
             network_args += " verbose=True"
+
+    if LoRA_type == "SDXL LoHa":
+        network_module = "networks.loha"
+        if use_tucker:
+            network_args += f" use_tucker={use_tucker}"
+        if conv_dim:
+            network_args += f" conv_dim={conv_dim}"
+        if conv_alpha:
+            network_args += f" conv_alpha={conv_alpha}"
+
+    if LoRA_type == "SDXL LoKr":
+        network_module = "networks.lokr"
+        network_args += f" factor={factor}"
+        if use_tucker:
+            network_args += f" use_tucker={use_tucker}"
+        if conv_dim:
+            network_args += f" conv_dim={conv_dim}"
+        if conv_alpha:
+            network_args += f" conv_alpha={conv_alpha}"
+
+    if is_leco:
+        network_module = "networks.lora"
 
     if LoRA_type in ["Flux1"]:
         # Add a list of supported network arguments for Flux1 below when supported
@@ -2090,6 +2151,10 @@ def train_model(
         "unsloth_offload_checkpointing": (
             True if anima_checkbox and anima_unsloth_offload_checkpointing else None
         ),
+        # LECO specific parameters
+        "prompts_file": leco_prompts_file if is_leco else None,
+        "max_denoising_steps": int(leco_max_denoising_steps) if is_leco else None,
+        "leco_denoise_guidance_scale": float(leco_denoise_guidance_scale) if is_leco else None,
     }
 
     # Given dictionary `config_toml_data`
@@ -2257,6 +2322,7 @@ def lora_tab(
                             "Anima LoKr",
                             "Flux1",
                             "Flux1 OFT",
+                            "LECO",
                             "Lumina",
                             "Kohya DyLoRA",
                             "Kohya LoCon",
@@ -2270,6 +2336,8 @@ def lora_tab(
                             "LyCORIS/LoHa",
                             "LyCORIS/LoKr",
                             "LyCORIS/Native Fine-Tuning",
+                            "SDXL LoHa",
+                            "SDXL LoKr",
                             "Standard",
                         ],
                         value="Standard",
@@ -2573,6 +2641,7 @@ def lora_tab(
                                 in {
                                     "Flux1",
                                     "Flux1 OFT",
+                                    "LECO",
                                     "Lumina",
                                     "Anima",
                                     "Anima LoHa",
@@ -2587,6 +2656,8 @@ def lora_tab(
                                     "LyCORIS/LoCon",
                                     "LyCORIS/LoHa",
                                     "LyCORIS/LoKr",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                     "Standard",
                                 },
                             },
@@ -2607,6 +2678,8 @@ def lora_tab(
                                     "LyCORIS/LoKr",
                                     "LyCORIS/LoCon",
                                     "LyCORIS/GLoRA",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                 },
                             },
                         },
@@ -2617,6 +2690,7 @@ def lora_tab(
                                 in {
                                     "Flux1",
                                     "Flux1 OFT",
+                                    "LECO",
                                     "Lumina",
                                     "Anima",
                                     "Anima LoHa",
@@ -2625,6 +2699,8 @@ def lora_tab(
                                     "Kohya DyLoRA",
                                     "Kohya LoCon",
                                     "LoRA-FA",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                 },
                             },
                         },
@@ -2635,6 +2711,7 @@ def lora_tab(
                                 in {
                                     "Flux1",
                                     "Flux1 OFT",
+                                    "LECO",
                                     "Lumina",
                                     "Anima",
                                     "Anima LoHa",
@@ -2651,6 +2728,8 @@ def lora_tab(
                                     "LyCORIS/LoHa",
                                     "LyCORIS/LoCon",
                                     "LyCORIS/LoKr",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                 },
                             },
                         },
@@ -2661,6 +2740,7 @@ def lora_tab(
                                 in {
                                     "Flux1",
                                     "Flux1 OFT",
+                                    "LECO",
                                     "Lumina",
                                     "Anima",
                                     "Anima LoHa",
@@ -2677,6 +2757,8 @@ def lora_tab(
                                     "LyCORIS/LoHa",
                                     "LyCORIS/LoCon",
                                     "LyCORIS/LoKr",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                 },
                             },
                         },
@@ -2687,6 +2769,7 @@ def lora_tab(
                                 in {
                                     "Flux1",
                                     "Flux1 OFT",
+                                    "LECO",
                                     "Lumina",
                                     "Anima",
                                     "Anima LoHa",
@@ -2703,6 +2786,8 @@ def lora_tab(
                                     "LyCORIS/LoHa",
                                     "LyCORIS/LoCon",
                                     "LyCORIS/LoKr",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                 }
                             },
                         },
@@ -2712,6 +2797,7 @@ def lora_tab(
                                 "visible": LoRA_type
                                 in {
                                     "Anima LoKr",
+                                    "SDXL LoKr",
                                     "LyCORIS/LoKr",
                                 },
                             },
@@ -2788,6 +2874,8 @@ def lora_tab(
                                 in {
                                     "Anima LoHa",
                                     "Anima LoKr",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                     "LyCORIS/BOFT",
                                     "LyCORIS/Diag-OFT",
                                     "LyCORIS/DyLoRA",
@@ -2884,10 +2972,13 @@ def lora_tab(
                                     "LyCORIS/LoHa",
                                     "LyCORIS/LoCon",
                                     "LyCORIS/LoKr",
+                                    "LECO",
                                     "Lumina",
                                     "Anima",
                                     "Anima LoHa",
                                     "Anima LoKr",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                     "Standard",
                                 },
                             },
@@ -2909,10 +3000,13 @@ def lora_tab(
                                     "LyCORIS/LoHa",
                                     "LyCORIS/LoKr",
                                     "LyCORIS/Native Fine-Tuning",
+                                    "LECO",
                                     "Lumina",
                                     "Anima",
                                     "Anima LoHa",
                                     "Anima LoKr",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                     "Standard",
                                 },
                             },
@@ -2933,10 +3027,13 @@ def lora_tab(
                                     "Kohya LoCon",
                                     "LoRA-FA",
                                     "LyCORIS/Native Fine-Tuning",
+                                    "LECO",
                                     "Lumina",
                                     "Anima",
                                     "Anima LoHa",
                                     "Anima LoKr",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                     "Standard",
                                 },
                             },
@@ -2957,10 +3054,13 @@ def lora_tab(
                                     "Kohya LoCon",
                                     "LyCORIS/Native Fine-Tuning",
                                     "LoRA-FA",
+                                    "LECO",
                                     "Lumina",
                                     "Anima",
                                     "Anima LoHa",
                                     "Anima LoKr",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                     "Standard",
                                 },
                             },
@@ -2999,6 +3099,8 @@ def lora_tab(
                                 in {
                                     "Anima LoHa",
                                     "Anima LoKr",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                     "LyCORIS/DyLoRA",
                                     "LyCORIS/iA3",
                                     "LyCORIS/BOFT",
@@ -3027,12 +3129,21 @@ def lora_tab(
                                     "Kohya LoCon",
                                     "LoRA-FA",
                                     "LyCORIS/Native Fine-Tuning",
+                                    "LECO",
                                     "Lumina",
                                     "Anima",
                                     "Anima LoHa",
                                     "Anima LoKr",
+                                    "SDXL LoHa",
+                                    "SDXL LoKr",
                                     "Standard",
                                 },
+                            },
+                        },
+                        "leco_accordion": {
+                            "gr_type": gr.Accordion,
+                            "update_params": {
+                                "visible": LoRA_type == "LECO",
                             },
                         },
                     }
@@ -3069,6 +3180,12 @@ def lora_tab(
             # Add SD3 Parameters
             sd3_training = sd3Training(
                 headless=headless, config=config, sd3_checkbox=source_model.sd3_checkbox
+            )
+
+            # Add LECO Parameters
+            leco_training = lecoTraining(
+                headless=headless,
+                config=config,
             )
 
             with gr.Accordion(
@@ -3176,6 +3293,7 @@ def lora_tab(
                     unit,
                     lycoris_accordion,
                     loraplus,
+                    leco_training.leco_accordion,
                 ],
             )
 
@@ -3475,6 +3593,10 @@ def lora_tab(
             sd3_training.sd3_text_encoder_batch_size,
             sd3_training.weighting_scheme,
             source_model.sd3_checkbox,
+            # LECO Parameters
+            leco_training.prompts_file,
+            leco_training.max_denoising_steps,
+            leco_training.leco_denoise_guidance_scale,
         ]
 
         configuration.button_open_config.click(
